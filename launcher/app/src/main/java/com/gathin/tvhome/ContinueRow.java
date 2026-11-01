@@ -64,6 +64,8 @@ final class ContinueRow {
     private final Map<String, Bitmap> pictures = new HashMap<>();
     private final List<View> cards = new ArrayList<>();
     final LinearLayout view;
+    /** The room around the row's content, inside view, for a focused card to grow into. */
+    final int inset;
     private final LinearLayout strip;
     private String shownKey = "";
     private boolean reading;
@@ -78,6 +80,10 @@ final class ContinueRow {
         view.setVisibility(View.GONE);
         view.setClipChildren(false);
         view.setClipToPadding(false);
+        // Home's root clips each child to its own bounds, so a focused card growing past the row's edge was cut:
+        // the row keeps INSET of room on every side, and Home places it INSET further out to make up for it.
+        inset = Math.round(16 * dp);
+        view.setPadding(inset, inset, inset, inset);
         TextView heading = new TextView(activity);
         heading.setText(R.string.cw_title);
         heading.setTextColor(Color.WHITE);

@@ -2715,7 +2715,8 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
                 View row = continueRow.view;
                 float x = clockBlock.getLeft() + ((View) clockBlock.getParent()).getLeft()
                         + ((View) clockBlock.getParent().getParent()).getLeft();
-                float y = card.top - Math.round(40 * density) - row.getHeight();
+                x -= continueRow.inset;
+                float y = card.top - Math.round(40 * density) - row.getHeight() + continueRow.inset;
                 if (row.getTranslationX() != x) row.setTranslationX(x);
                 if (row.getTranslationY() != y) row.setTranslationY(y);
             }
