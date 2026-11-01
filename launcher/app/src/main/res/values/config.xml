@@ -468,6 +468,8 @@
          Vilnius: 54.69 and 25.28. -->
     <string name="latitude" translatable="false"></string>
     <string name="longitude" translatable="false"></string>
+    <!-- weather: the place's name on the reading's last line. Empty: no name. -->
+    <string name="weather_place" translatable="false"></string>
 
     <!-- Cinematic top shelf: the focused dock app's artwork, softened, fills the top of the screen in its
          colour; the shelf gets a larger name, a "Last opened" line (from the apps Home opened) and dock position
@@ -521,6 +523,10 @@
          latitude and longitude above (no account or key). Fetched only while Home is on screen, every 30 minutes;
          needs the INTERNET permission this build adds. Off by default; a theme can set "weather": true. -->
     <bool name="weather">false</bool>
+    <!-- Durabrand build: Home is the dock alone, ended by an "All apps" tile inside the dock's band that opens the
+         App library; no rows below. Needs app_library and dock_row; ignored with single_row. Off by default; a
+         theme can set "dock_library_tile": true. -->
+    <bool name="dock_library_tile">false</bool>
     <!-- The clock screensaver (Home idle clock and the system screensaver) over Home's wallpaper instead of black with
          a coloured glow. The clock still moves every minute. Can also be set with "clock_wallpaper" in a theme. -->
     <bool name="clock_wallpaper">false</bool>

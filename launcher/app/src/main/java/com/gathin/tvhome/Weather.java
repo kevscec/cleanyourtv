@@ -1,7 +1,5 @@
 package com.gathin.tvhome;
 
-import java.util.Locale;
-
 /**
  * weather: the current temperature, sky and today's range from Open-Meteo (no account, no key), for the latitude
  * and longitude in config.xml. Pure logic here; WeatherPanel fetches and shows it, only while Home is on screen.
@@ -100,11 +98,6 @@ final class Weather {
             case STORM: return "⛈️";
             default: return "☁️";
         }
-    }
-
-    /** "↑25° ↓16°": today's high and low. */
-    static String range(Reading reading) {
-        return String.format(Locale.ROOT, "↑%d°  ↓%d°", reading.max, reading.min);
     }
 
     /** Whether to fetch now: the reading is due, and a failed try is not too recent. A clock set back counts as due. */

@@ -75,6 +75,13 @@ public class DockDecoration extends RecyclerView.ItemDecoration {
         return Math.max(0f, Math.min(gap, roomPx));
     }
 
+    /** dock_library_tile: how far the band reaches past the last dock tile, to hold the All apps tile. */
+    private float extraRight;
+
+    void setExtraRight(float px) {
+        extraRight = px;
+    }
+
     @Override
     public void getItemOffsets(@NonNull Rect outRect, @NonNull View view, @NonNull RecyclerView parent,
                                @NonNull RecyclerView.State state) {
@@ -138,6 +145,7 @@ public class DockDecoration extends RecyclerView.ItemDecoration {
             rect.left = Math.max(rect.left, density);
             rect.right = Math.min(rect.right, parent.getWidth() - density);
         }
+        rect.right += extraRight;
         rect.bottom += namesRoom;
         if (lightGlass && (rect.top != shaderTop || rect.bottom != shaderBottom)) {
             // The pills' glass (pill_bg: white, 18% fading to 8%), a little fainter over this much larger area.

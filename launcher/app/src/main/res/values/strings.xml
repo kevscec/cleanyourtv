@@ -168,4 +168,7 @@
     <string name="weather_snow">Snow</string>
     <string name="weather_showers">Showers</string>
     <string name="weather_storm">Thunderstorm</string>
+    <string name="weather_range">High %1$d° · Low %2$d°</string>
+    <!-- dock_library_tile: the tile at the end of the dock that opens the App library. -->
+    <string name="all_apps">All apps</string>
 </resources>

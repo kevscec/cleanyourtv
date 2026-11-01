@@ -58,6 +58,8 @@ rule sit on its wanted list until a screenshot arrives.
 | `date_below_clock` | <img src="switches/date_below_clock.jpg" width="320" alt="date_below_clock on a TV"> |
 | `editorial_home` | <img src="switches/editorial_home.jpg" width="320" alt="editorial_home on a TV"> |
 | `weather` | <img src="switches/weather.jpg" width="320" alt="weather on a TV"> |
+| `weather_place` | <img src="switches/weather.jpg" width="320" alt="weather_place under the weather reading on a TV"> |
+| `dock_library_tile` | <img src="switches/dock_library_tile.jpg" width="320" alt="dock_library_tile on a TV"> |
 | `locale` | <img src="switches/locale.jpg" width="320" alt="locale set to en on a TV whose system language is Vietnamese"> |
 | `power_on_home` | <img src="switches/power_on_home.jpg" width="320" alt="power_on_home on a TV"> |
 | `home_long_press_home` | <img src="switches/home_long_press_home.jpg" width="320" alt="home_long_press_home on a TV"> |

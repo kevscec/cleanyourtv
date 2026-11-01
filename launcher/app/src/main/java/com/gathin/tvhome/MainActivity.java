@@ -68,6 +68,7 @@ import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.RelativeLayout;
 import android.widget.PopupWindow;
+import android.widget.TextClock;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -594,8 +595,9 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         if (cfg.editorialHome) editorialHeader();
         String latitude = getString(R.string.latitude), longitude = getString(R.string.longitude);
         if (cfg.weather && !latitude.trim().isEmpty() && !longitude.trim().isEmpty()) {
-            weatherPanel = new WeatherPanel(this, (LinearLayout) findViewById(R.id.clock).getParent(), handler,
-                    latitude, longitude);
+            LinearLayout beside = cfg.editorialHome ? (LinearLayout) clockBlock
+                    : (LinearLayout) findViewById(R.id.clock).getParent();
+            weatherPanel = new WeatherPanel(this, beside, handler, latitude, longitude);
         }
         if (shamsi) {
             shamsiDate.setVisibility(View.VISIBLE);
@@ -684,8 +686,10 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             public void onChildViewDetachedFromWindow(@NonNull View v) {
             }
         });
-        if (dockRow) grid.addItemDecoration(new DockDecoration(COLUMNS, density, cinematic, cfg.alwaysShowNames, cfg.dockOpacity, cfg.dockGlass, cfg.dockEvenPadding, cfg.dockBand,
+        DockDecoration dockBand = null;
+        if (dockRow) grid.addItemDecoration(dockBand = new DockDecoration(COLUMNS, density, cinematic, cfg.alwaysShowNames, cfg.dockOpacity, cfg.dockGlass, cfg.dockEvenPadding, cfg.dockBand,
                 singleRow, cfg.dockBandAll));
+        if (cfg.dockLibraryTile && dockBand != null) addAllAppsTile(dockBand);
         if (cfg.fadeRows) TopFade.attach(grid, 48 * density);
         // Reduced motion: the tiles are simply there, with no entrance (reloadApps skips it there too).
         if (animations && !reducedMotion) {
@@ -1768,6 +1772,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         if (openPopup != null) openPopup.dismiss();
         libraryFocusPending = false;
         libraryFromTopBar = false;
+        libraryFromDockTile = false;
         libraryFromVpnPill = false;
         appLibrary = new AppLibraryDialog(this, animations, reducedMotion, appLibrarySelection, libraryOkOpens, adapter::containsPackage, () -> reloadApps(false), () -> {
             appLibrary = null;
@@ -1775,6 +1780,11 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             if (libraryFromTopBar) {
                 libraryFromTopBar = false;
                 btnLibraryTop.requestFocus();
+                return;
+            }
+            if (libraryFromDockTile) {
+                libraryFromDockTile = false;
+                allAppsTile.requestFocus();
                 return;
             }
             boolean fromVpnPill = libraryFromVpnPill;
@@ -2458,6 +2468,11 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
                 focusLibrary();
                 return true;
             }
+            // dock_library_tile: the All apps tile is the dock's real end.
+            if (forward && allAppsTile != null && position == Math.min(count, adapter.dockFilled()) - 1) {
+                allAppsTile.requestFocus();
+                return true;
+            }
             // In the dock, the last app is the row's end: the empty slots after it take no focus.
             int rowCount = position < COLUMNS ? Math.min(count, adapter.dockFilled()) : count;
             return GridNavigation.atHorizontalEdge(position, rowCount, COLUMNS,
@@ -2547,12 +2562,142 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         rowLp.width = ViewGroup.LayoutParams.WRAP_CONTENT;
         clockRow.setLayoutParams(rowLp);
         clock.setTypeface(Typeface.create("serif", Typeface.NORMAL));
-        clock.setTextSize(TypedValue.COMPLEX_UNIT_SP, 60);
+        clock.setTextSize(TypedValue.COMPLEX_UNIT_SP, 64);
         clock.setLetterSpacing(-0.02f);
-        TextView date = findViewById(R.id.date);
-        date.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12);
+        TextClock date = findViewById(R.id.date);
+        date.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11);
         date.setLetterSpacing(0.2f);
+        // One line, "SATURDAY, 31 OCTOBER", where a language (Spanish here) splits the date over two.
+        String pattern = getString(R.string.date_format_home).replace("\n", ", ");
+        date.setFormat12Hour(pattern);
+        date.setFormat24Hour(pattern);
+        date.setSingleLine(true);
+        // setSingleLine replaces the caps transformation with its own; put the layout's caps back.
+        date.setAllCaps(true);
+        // The clock and date become one column inside a now horizontal panel, so whatever sits beside them
+        // (the weather) is centred on the whole column, with a line from the panel's top to its bottom.
+        LinearLayout panelRow = (LinearLayout) clockBlock;
+        LinearLayout column = new LinearLayout(this);
+        column.setOrientation(LinearLayout.VERTICAL);
+        while (panelRow.getChildCount() > 0) {
+            View child = panelRow.getChildAt(0);
+            ViewGroup.LayoutParams childLp = child.getLayoutParams();
+            panelRow.removeViewAt(0);
+            column.addView(child, childLp);
+        }
+        panelRow.setOrientation(LinearLayout.HORIZONTAL);
+        LinearLayout.LayoutParams columnLp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT);
+        columnLp.gravity = Gravity.CENTER_VERTICAL;
+        panelRow.addView(column, columnLp);
         wallpaperPlayer.anchorCaption(clockBlock);
+    }
+
+    /**
+     * dock_library_tile: an All apps tile at the end of the dock, inside its band, that opens the App library. It
+     * lives over the grid rather than in it (the grid's first COLUMNS positions are the dock apps), so the grid
+     * gives up room on its right for it and the band reaches over that room.
+     */
+    private void addAllAppsTile(DockDecoration band) {
+        int width = Math.round(170 * density);
+        grid.setPadding(grid.getPaddingLeft(), grid.getPaddingTop(), grid.getPaddingRight() + width
+                + Math.round(24 * density), grid.getPaddingBottom());
+        LinearLayout tile = new LinearLayout(this);
+        tile.setOrientation(LinearLayout.HORIZONTAL);
+        tile.setGravity(Gravity.CENTER);
+        tile.setFocusable(true);
+        tile.setContentDescription(getString(R.string.all_apps));
+        ImageView icon = new ImageView(this);
+        icon.setImageResource(R.drawable.ic_apps);
+        icon.setColorFilter(Color.WHITE);
+        int iconSize = Math.round(20 * density);
+        tile.addView(icon, new LinearLayout.LayoutParams(iconSize, iconSize));
+        TextView label = new TextView(this);
+        label.setText(R.string.all_apps);
+        label.setTextColor(Color.WHITE);
+        label.setTextSize(TypedValue.COMPLEX_UNIT_SP, 14);
+        label.setTypeface(UiFont.get(this, R.string.font_medium));
+        LinearLayout.LayoutParams labelLp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT);
+        labelLp.setMarginStart(Math.round(10 * density));
+        tile.addView(label, labelLp);
+        GradientDrawable face = new GradientDrawable();
+        tile.setBackground(face);
+        Runnable look = () -> {
+            boolean on = tile.isFocused();
+            face.setColor(on ? 0x38FFFFFF : 0x17FFFFFF);
+            face.setStroke(Math.round((on ? 2.5f : 1f) * density), on ? Color.WHITE : 0x26FFFFFF);
+            float scale = on && advancedEffects ? 1.06f : 1f;
+            tile.animate().scaleX(scale).scaleY(scale).setDuration(animations ? 150 : 0).start();
+        };
+        look.run();
+        tile.setOnFocusChangeListener((v, focused) -> look.run());
+        tile.setOnClickListener(v -> {
+            onLibraryRequested();
+            libraryFromDockTile = true;   // closing it comes back to this tile
+        });
+        tile.setOnKeyListener((v, key, event) -> {
+            if (event.getAction() != KeyEvent.ACTION_DOWN) return false;
+            if (key == KeyEvent.KEYCODE_DPAD_LEFT) {
+                focusTile(Math.max(0, Math.min(COLUMNS, adapter.appCount()) - 1));
+                return true;
+            }
+            // Nothing below or beside it: the dock is the last row and this is its end.
+            return key == KeyEvent.KEYCODE_DPAD_DOWN || key == KeyEvent.KEYCODE_DPAD_RIGHT;
+        });
+        tile.setVisibility(View.INVISIBLE);
+        root.addView(tile, new FrameLayout.LayoutParams(width, Math.round(80 * density)));
+        allAppsTile = tile;
+        // Follow the dock: the tile takes the last dock tile's height and the dock's gap, and the band grows to it.
+        // A scroll (the dock parking on its line) moves the tiles without a layout pass, so follow that too.
+        Rect card = new Rect();
+        Runnable follow = () -> {
+            int last = Math.min(COLUMNS, adapter.appCount()) - 1;
+            RecyclerView.ViewHolder first = grid.findViewHolderForAdapterPosition(0);
+            RecyclerView.ViewHolder end = last < 0 ? null : grid.findViewHolderForAdapterPosition(last);
+            if (first == null || end == null) return;
+            View firstCard = first.itemView.findViewById(R.id.card);
+            View endCard = end.itemView.findViewById(R.id.card);
+            if (endCard.getWidth() == 0) return;
+            card.set(0, 0, endCard.getWidth(), endCard.getHeight());
+            root.offsetDescendantRectToMyCoords(endCard, card);
+            int gap = last > 0 ? cardGap(firstCard, endCard, last) : Math.round(24 * density);
+            FrameLayout.LayoutParams lp = (FrameLayout.LayoutParams) tile.getLayoutParams();
+            if (lp.leftMargin != card.right + gap || lp.topMargin != card.top || lp.height != card.height()) {
+                lp.leftMargin = card.right + gap;
+                lp.topMargin = card.top;
+                lp.height = card.height();
+                tile.setLayoutParams(lp);
+                face.setCornerRadius(AppAdapter.cornerRadius(endCard.getWidth(), density));
+                band.setExtraRight(gap + width);
+                grid.invalidate();
+            }
+            wallpaperPlayer.captionAbove(card.top - Math.round(56 * density));
+            if (tile.getVisibility() != View.VISIBLE) tile.setVisibility(View.VISIBLE);
+        };
+        grid.getViewTreeObserver().addOnGlobalLayoutListener(follow::run);
+        grid.addOnScrollListener(new RecyclerView.OnScrollListener() {
+            @Override
+            public void onScrolled(@NonNull RecyclerView view, int dx, int dy) {
+                follow.run();
+            }
+        });
+    }
+
+    /** The gap between two dock tiles, from the first and the last of count + 1 equal cells. */
+    private int cardGap(View firstCard, View lastCard, int count) {
+        Rect a = new Rect(0, 0, firstCard.getWidth(), firstCard.getHeight());
+        Rect b = new Rect(0, 0, lastCard.getWidth(), lastCard.getHeight());
+        root.offsetDescendantRectToMyCoords(firstCard, a);
+        root.offsetDescendantRectToMyCoords(lastCard, b);
+        return Math.max(0, (b.left - a.left) / count - firstCard.getWidth());
+    }
+
+    /** A view's top inside one of its ancestors, through the groups between them. */
+    private static int topIn(View ancestor, View view) {
+        int top = 0;
+        for (View v = view; v != null && v != ancestor; v = (View) v.getParent()) top += v.getTop();
+        return top;
     }
 
     /** Centre the one-row header when the greeting and extra date lines are absent (#2265). */
@@ -2587,9 +2732,11 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         lp.bottomMargin = 0;
         buttons.setLayoutParams(lp);
         // Either side can be laid out first; update after both without requesting another layout mid-pass.
-        Runnable align = () -> buttons.setTranslationY(clockRow.getTop() + clock.getTop()
+        View block = findViewById(R.id.leftBlock);
+        Runnable align = () -> buttons.setTranslationY(topIn(block, clock)
                 + (clock.getHeight() - buttons.getHeight()) / 2f);
         clockRow.addOnLayoutChangeListener((v, l, t, r, b, ol, ot, or, ob) -> align.run());
+        block.addOnLayoutChangeListener((v, l, t, r, b, ol, ot, or, ob) -> align.run());
         buttons.addOnLayoutChangeListener((v, l, t, r, b, ol, ot, or, ob) -> align.run());
     }
 
@@ -3076,6 +3223,9 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     private View btnLibraryTop;
     /** The open library came from that button: closing it returns there instead of scrolling to the grid's end. */
     private boolean libraryFromTopBar;
+    /** dock_library_tile: the library was opened from the All apps tile, so closing it focuses the tile again. */
+    private boolean libraryFromDockTile;
+    private View allAppsTile;
     /** The open library came from the VPN pill (vpn_pill, no VPN app): closing it returns there while the pill still shows. */
     private boolean libraryFromVpnPill;
 

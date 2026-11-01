@@ -21,7 +21,8 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 /**
- * weather: the reading beside the clock, after a thin line: "⛅ 23°", the sky in words, and today's range. Fetched
+ * weather: the reading beside the clock, after a thin line, as in the editorial design: "☁ 21° Nublado", then
+ * "Máx 29° · Mín 20°" and the place's name, centred on the clock and date. Fetched
  * on a worker thread when Home resumes and on the minute tick, only when due (Weather.due), never in the
  * background. The last reading is kept, so Home shows it at once; one older than Weather.STALE_MS is hidden.
  */
@@ -38,10 +39,11 @@ final class WeatherPanel {
     private final ExecutorService worker = Executors.newSingleThreadExecutor();
     private final View divider;
     private final LinearLayout block;
-    private final TextView now, sky, range;
+    private final TextView icon, temperature, sky, range, place;
     private boolean loading;
 
-    WeatherPanel(Context context, LinearLayout clockRow, Handler handler, String latitude, String longitude) {
+    /** beside: the horizontal group the line and the reading are added to, after what it already holds. */
+    WeatherPanel(Context context, LinearLayout beside, Handler handler, String latitude, String longitude) {
         this.context = context;
         this.handler = handler;
         url = Weather.url(latitude, longitude);
@@ -52,37 +54,55 @@ final class WeatherPanel {
         }
         float dp = context.getResources().getDisplayMetrics().density;
         divider = new View(context);
-        divider.setBackgroundColor(0x40FFFFFF);
-        LinearLayout.LayoutParams line = new LinearLayout.LayoutParams(Math.max(1, Math.round(dp)), Math.round(64 * dp));
-        line.gravity = Gravity.CENTER_VERTICAL;
-        line.setMarginStart(Math.round(26 * dp));
-        line.setMarginEnd(Math.round(26 * dp));
-        clockRow.addView(divider, line);
+        divider.setBackgroundColor(0x38FFFFFF);
+        // Full height: the line runs from the panel's top padding to its bottom one.
+        LinearLayout.LayoutParams line = new LinearLayout.LayoutParams(Math.max(1, Math.round(dp)),
+                LinearLayout.LayoutParams.MATCH_PARENT);
+        line.setMarginStart(Math.round(23 * dp));
+        line.setMarginEnd(Math.round(23 * dp));
+        beside.addView(divider, line);
         block = new LinearLayout(context);
         block.setOrientation(LinearLayout.VERTICAL);
-        now = text(30, Color.WHITE);
-        now.setTypeface(Typeface.create("serif", Typeface.NORMAL));
-        sky = text(14, 0xD9FFFFFF);
-        range = text(13, 0xA6FFFFFF);
-        range.setLetterSpacing(0.08f);
+        LinearLayout now = new LinearLayout(context);
+        now.setOrientation(LinearLayout.HORIZONTAL);
+        now.setGravity(Gravity.CENTER_VERTICAL);
+        icon = text(24, Color.WHITE, 0);
+        temperature = text(27, Color.WHITE, 0);
+        temperature.setTypeface(Typeface.create("serif", Typeface.NORMAL));
+        sky = text(15, 0xE6FFFFFF, 0);
+        now.addView(icon);
+        now.addView(temperature, gap(8 * dp));
+        now.addView(sky, gap(10 * dp));
         block.addView(now);
-        block.addView(sky);
+        range = text(11, 0xB3FFFFFF, Math.round(8 * dp));
+        place = text(11, 0xB3FFFFFF, Math.round(3 * dp));
+        String name = context.getString(R.string.weather_place).trim();
+        place.setText(name);
+        place.setVisibility(name.isEmpty() ? View.GONE : View.VISIBLE);
         block.addView(range);
+        block.addView(place);
         LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT,
                 LinearLayout.LayoutParams.WRAP_CONTENT);
         lp.gravity = Gravity.CENTER_VERTICAL;
-        clockRow.addView(block, lp);
+        beside.addView(block, lp);
         show();
     }
 
-    private TextView text(float sp, int color) {
+    private TextView text(float sp, int color, int top) {
         TextView view = new TextView(context);
         view.setTextSize(TypedValue.COMPLEX_UNIT_SP, sp);
         view.setTextColor(color);
         view.setSingleLine(true);
         view.setIncludeFontPadding(false);
-        view.setPadding(0, 0, 0, Math.round(3 * context.getResources().getDisplayMetrics().density));
+        view.setPadding(0, top, 0, 0);
         return view;
+    }
+
+    private static LinearLayout.LayoutParams gap(float start) {
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT);
+        lp.setMarginStart(Math.round(start));
+        return lp;
     }
 
     /** Show the kept reading, and fetch a new one when it is due. Called on resume and every minute. */
@@ -141,9 +161,10 @@ final class WeatherPanel {
                 preferences.getInt("max", 0), preferences.getInt("min", 0), preferences.getInt("code", 3),
                 preferences.getBoolean("day", true));
         int condition = Weather.condition(reading.code);
-        now.setText(Weather.emoji(condition, reading.day) + " " + reading.temperature + "°");
+        icon.setText(Weather.emoji(condition, reading.day));
+        temperature.setText(reading.temperature + "°");
         sky.setText(CONDITIONS[condition]);
-        range.setText(Weather.range(reading));
+        range.setText(context.getString(R.string.weather_range, reading.max, reading.min));
     }
 
     void close() {

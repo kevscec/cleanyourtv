@@ -162,4 +162,7 @@
     <string name="weather_snow">שלג</string>
     <string name="weather_showers">ממטרים</string>
     <string name="weather_storm">סופת רעמים</string>
+    <string name="weather_range">מקס׳ %1$d° · מינ׳ %2$d°</string>
+    <!-- dock_library_tile: the tile at the end of the dock that opens the App library. -->
+    <string name="all_apps">כל האפליקציות</string>
 </resources>

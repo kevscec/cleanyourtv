@@ -21,6 +21,7 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.FrameLayout;
 import android.widget.ImageView;
+import android.widget.LinearLayout;
 import android.widget.TextView;
 
 import java.io.File;
@@ -66,6 +67,9 @@ final class WallpaperPlayer {
     private final boolean editorial;
     /** editorial_home: focus is below the dock and the caption is hidden. */
     private boolean captionAway;
+    /** editorial_home: the highest the caption may sit (under the panel) and where its bottom goes (0: unset). */
+    private float captionTop;
+    private int captionBottom;
     /** wallpaper_moods: the collection's groups by time of day; empty rotates through all of it. */
     private final Map<String, Set<String>> moods;
     /** config.xml latitude and longitude for the sun's times, and today's {sunrise, sunset} once worked out. */
@@ -244,10 +248,16 @@ final class WallpaperPlayer {
         return text;
     }
 
-    /** editorial_home: the title large in the system serif, its credit under it, placed by anchorCaption. */
+    /**
+     * editorial_home: the title large in the system serif with its credit under it, in a group (captionGroup) that
+     * fades and moves together; placed by anchorCaption and captionAbove.
+     */
     private static TextView makeEditorialCaption(Context context, FrameLayout root, float dp) {
+        LinearLayout group = new LinearLayout(context);
+        group.setOrientation(LinearLayout.VERTICAL);
+        group.setAlpha(0f);
         TextView text = new TextView(context);
-        text.setTextSize(TypedValue.COMPLEX_UNIT_SP, 32);
+        text.setTextSize(TypedValue.COMPLEX_UNIT_SP, 36);
         text.setTextColor(Color.WHITE);
         text.setTypeface(Typeface.create("serif", Typeface.NORMAL));
         text.setShadowLayer(10 * dp, 0, dp, 0x99000000);
@@ -256,22 +266,42 @@ final class WallpaperPlayer {
         text.setEllipsize(TextUtils.TruncateAt.END);
         text.setMaxWidth(Math.round(760 * dp));
         text.setFocusable(false);
-        text.setAlpha(0f);
-        root.addView(text, new FrameLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT,
+        group.addView(text);
+        root.addView(group, new FrameLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT,
                 ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.TOP | Gravity.START));
         return text;
     }
 
-    /** editorial_home: keep the caption lined up under anchor (the clock panel), a gap below it. */
+    /** editorial_home: line the caption up with anchor (the clock panel), never higher than a gap below it. */
     void anchorCaption(View anchor) {
         if (caption == null || !editorial) return;
-        float gap = 22 * anchor.getResources().getDisplayMetrics().density;
+        float gap = 28 * anchor.getResources().getDisplayMetrics().density;
         int[] at = new int[2];
         anchor.addOnLayoutChangeListener((v, l, t, r, b, ol, ot, or, ob) -> {
             v.getLocationInWindow(at);
-            caption.setTranslationX(at[0]);
-            caption.setTranslationY(at[1] + v.getHeight() + gap);
+            captionGroup().setTranslationX(at[0]);
+            captionTop = at[1] + v.getHeight() + gap;
+            placeCaption();
         });
+        captionGroup().addOnLayoutChangeListener((v, l, t, r, b, ol, ot, or, ob) -> placeCaption());
+    }
+
+    /** editorial_home with dock_library_tile: the caption's bottom sits at y (above the dock), as in the design. */
+    void captionAbove(int y) {
+        if (caption == null || !editorial || captionBottom == y) return;
+        captionBottom = y;
+        placeCaption();
+    }
+
+    private void placeCaption() {
+        View group = captionGroup();
+        float y = captionBottom > 0 ? Math.max(captionTop, captionBottom - group.getHeight()) : captionTop;
+        if (group.getTranslationY() != y) group.setTranslationY(y);
+    }
+
+    /** What fades and moves: the editorial group, or the caption alone. */
+    private View captionGroup() {
+        return editorial ? (View) caption.getParent() : caption;
     }
 
     /** editorial_home: hide the caption while focus is below the dock, where the rows scroll up under it. */
@@ -279,7 +309,7 @@ final class WallpaperPlayer {
         if (caption == null || !editorial || captionAway == away) return;
         captionAway = away;
         // Visibility, not alpha: showCaption owns the alpha for its fade between pictures.
-        caption.setVisibility(away ? View.INVISIBLE : View.VISIBLE);
+        captionGroup().setVisibility(away ? View.INVISIBLE : View.VISIBLE);
     }
 
     /** The caption's text: the name as written, or in editorial_home its title and a small, dimmer credit line. */
@@ -289,9 +319,9 @@ final class WallpaperPlayer {
         if (parts[1].isEmpty()) return parts[0];
         SpannableString text = new SpannableString(parts[0] + "\n" + parts[1]);
         int start = parts[0].length() + 1, end = text.length();
-        text.setSpan(new RelativeSizeSpan(0.42f), start, end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+        text.setSpan(new RelativeSizeSpan(0.3f), start, end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
         text.setSpan(new TypefaceSpan("sans-serif"), start, end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
-        text.setSpan(new ForegroundColorSpan(0xB3FFFFFF), start, end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+        text.setSpan(new ForegroundColorSpan(0x99FFFFFF), start, end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
         return text;
     }
 
@@ -299,20 +329,21 @@ final class WallpaperPlayer {
     private void showCaption(boolean fade) {
         if (caption == null) return;
         String name = names.get(displayed);
-        caption.animate().cancel();
+        View shown = captionGroup();
+        shown.animate().cancel();
         if (name == null) {
-            caption.setAlpha(0f);
+            shown.setAlpha(0f);
             return;
         }
         caption.setContentDescription(name);
-        if (!fade || caption.getAlpha() == 0f) {
+        if (!fade || shown.getAlpha() == 0f) {
             caption.setText(captionText(name));
-            caption.setAlpha(1f);
+            shown.setAlpha(1f);
             return;
         }
-        caption.animate().alpha(0f).setDuration(250).withEndAction(() -> {
+        shown.animate().alpha(0f).setDuration(250).withEndAction(() -> {
             caption.setText(captionText(name));
-            caption.animate().alpha(1f).setDuration(350).start();
+            shown.animate().alpha(1f).setDuration(350).start();
         }).start();
     }
 

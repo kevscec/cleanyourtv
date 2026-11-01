@@ -56,11 +56,6 @@ public class WeatherTest {
     }
 
     @Test
-    public void theRangeShowsHighThenLow() {
-        assertEquals("↑25°  ↓-3°", Weather.range(new Weather.Reading(20, 25, -3, 0, true)));
-    }
-
-    @Test
     public void aFetchIsDueEveryHalfHourButNotRightAfterAFailedTry() {
         long now = 10_000_000L;
         assertTrue(Weather.due(0, 0, now));
