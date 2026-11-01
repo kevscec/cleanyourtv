@@ -158,4 +158,14 @@
     <string name="clock_format_system">System</string>
     <string name="clock_format_12">12-hour</string>
     <string name="clock_format_24">24-hour</string>
+    <!-- weather (WeatherPanel): the sky in words under the temperature. -->
+    <string name="weather_clear">Clear</string>
+    <string name="weather_partly">Partly cloudy</string>
+    <string name="weather_cloudy">Cloudy</string>
+    <string name="weather_fog">Fog</string>
+    <string name="weather_drizzle">Drizzle</string>
+    <string name="weather_rain">Rain</string>
+    <string name="weather_snow">Snow</string>
+    <string name="weather_showers">Showers</string>
+    <string name="weather_storm">Thunderstorm</string>
 </resources>

@@ -149,4 +149,14 @@
     <string name="clock_format_system">Sistema</string>
     <string name="clock_format_12">12 horas</string>
     <string name="clock_format_24">24 horas</string>
+    <!-- weather (WeatherPanel): the sky in words under the temperature. -->
+    <string name="weather_clear">Despejado</string>
+    <string name="weather_partly">Parcialmente nublado</string>
+    <string name="weather_cloudy">Nublado</string>
+    <string name="weather_fog">Niebla</string>
+    <string name="weather_drizzle">Llovizna</string>
+    <string name="weather_rain">Lluvia</string>
+    <string name="weather_snow">Nieve</string>
+    <string name="weather_showers">Chubascos</string>
+    <string name="weather_storm">Tormenta</string>
 </resources>

@@ -517,6 +517,10 @@
          under it, its credit (after " · " in captions.txt) on a small line below. Off by default; a theme can set
          "editorial_home": true. Pairs with date_below_clock and wallpaper_captions. -->
     <bool name="editorial_home">false</bool>
+    <!-- Durabrand build: the current temperature, sky and today's range beside the clock, from Open-Meteo for the
+         latitude and longitude above (no account or key). Fetched only while Home is on screen, every 30 minutes;
+         needs the INTERNET permission this build adds. Off by default; a theme can set "weather": true. -->
+    <bool name="weather">false</bool>
     <!-- The clock screensaver (Home idle clock and the system screensaver) over Home's wallpaper instead of black with
          a coloured glow. The clock still moves every minute. Can also be set with "clock_wallpaper" in a theme. -->
     <bool name="clock_wallpaper">false</bool>

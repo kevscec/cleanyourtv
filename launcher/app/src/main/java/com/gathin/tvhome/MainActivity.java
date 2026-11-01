@@ -183,6 +183,8 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     private boolean advancedEffects;
     private TextView greeting;
     private View clockBlock;
+    /** weather: the reading beside the clock; null when off or config.xml has no location. */
+    private WeatherPanel weatherPanel;
     private View btnInputs;
     /** config show_inputs_pill: false keeps the Inputs pill hidden even when the TV has inputs. */
     private boolean showInputsPill = true;
@@ -438,6 +440,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             if (festive) updateWifiLabel();
             sky.update();
             wallpaperPlayer.update();
+            if (weatherPanel != null) weatherPanel.refresh();
             handler.postDelayed(this, MINUTE_MS);
         }
     };
@@ -589,6 +592,11 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             alignDateBelowIconsWithClock();
         }
         if (cfg.editorialHome) editorialHeader();
+        String latitude = getString(R.string.latitude), longitude = getString(R.string.longitude);
+        if (cfg.weather && !latitude.trim().isEmpty() && !longitude.trim().isEmpty()) {
+            weatherPanel = new WeatherPanel(this, (LinearLayout) findViewById(R.id.clock).getParent(), handler,
+                    latitude, longitude);
+        }
         if (shamsi) {
             shamsiDate.setVisibility(View.VISIBLE);
             TextView date = findViewById(R.id.date);
@@ -1127,6 +1135,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         sky.update();
         wallpaperPlayer.start();
         handler.postDelayed(minuteTick, MINUTE_MS);
+        if (weatherPanel != null) weatherPanel.refresh();
         if (festive && lamp != null) {
             lamp.start();
             LocalDate today = LocalDate.now();
@@ -1371,6 +1380,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         unregisterReceiver(packageReceiver);
         if (openOnStartOnWake) unregisterReceiver(wakeReceiver);
         wallpaperPlayer.close();
+        if (weatherPanel != null) weatherPanel.close();
         ConnectivityManager cm = getSystemService(ConnectivityManager.class);
         TvInputManager tim = (TvInputManager) getSystemService(TV_INPUT_SERVICE);
         if (tim != null) tim.unregisterCallback(inputCallback);
