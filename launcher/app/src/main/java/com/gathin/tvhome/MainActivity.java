@@ -25,6 +25,7 @@ import android.graphics.Paint;
 import android.graphics.RadialGradient;
 import android.graphics.Rect;
 import android.graphics.Shader;
+import android.graphics.Typeface;
 import android.graphics.drawable.BitmapDrawable;
 import android.graphics.drawable.ColorDrawable;
 import android.graphics.drawable.Drawable;
@@ -587,6 +588,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
                 && !getResources().getBoolean(R.bool.rtl_menu_bar)) {
             alignDateBelowIconsWithClock();
         }
+        if (cfg.editorialHome) editorialHeader();
         if (shamsi) {
             shamsiDate.setVisibility(View.VISIBLE);
             TextView date = findViewById(R.id.date);
@@ -1785,6 +1787,8 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     public void onTileFocused(int position, View card) {
         lastFocused = position;
         lastFocusedKey = adapter.keyAt(position);
+        // editorial_home: the rows below scroll up under the large caption, so it steps aside off the dock.
+        wallpaperPlayer.dimCaption(!DockSlots.inDockRow(dockRow, singleRow, position, COLUMNS));
         // Focus restored before the first layout (cold start): the tile has no size yet, and the glass
         // would be sized to 2*pad. Run again once the tile is laid out.
         if (card.getWidth() == 0) {
@@ -2504,6 +2508,41 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             textLp.gravity = ((TextView) text).getGravity() & Gravity.HORIZONTAL_GRAVITY_MASK;
             text.setLayoutParams(textLp);
         }
+    }
+
+    /**
+     * editorial_home: the clock block becomes a glass panel only as wide as its clock and date, the clock in the
+     * system serif, and the wallpaper caption sits large under it. A translucent gradient like dock_glass, not a
+     * blur, which 1 GB TVs cannot afford.
+     */
+    private void editorialHeader() {
+        RelativeLayout.LayoutParams lp = (RelativeLayout.LayoutParams) clockBlock.getLayoutParams();
+        // Without its end rule the block wraps its texts instead of stretching to the top buttons.
+        lp.width = ViewGroup.LayoutParams.WRAP_CONTENT;
+        lp.removeRule(RelativeLayout.START_OF);
+        lp.removeRule(RelativeLayout.LEFT_OF);
+        clockBlock.setLayoutParams(lp);
+        GradientDrawable panel = new GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM,
+                new int[] {0x33FFFFFF, 0x14FFFFFF});
+        panel.setCornerRadius(24 * density);
+        panel.setStroke(Math.max(1, Math.round(density)), 0x40FFFFFF);
+        clockBlock.setBackground(panel);
+        int padX = Math.round(30 * density), padY = Math.round(18 * density);
+        clockBlock.setPadding(padX, padY, padX, padY + Math.round(4 * density));
+        TextView clock = findViewById(R.id.clock);
+        // A match_parent row adds nothing to a wrapping block's width, which then followed the date alone and
+        // broke the larger clock over two lines.
+        View clockRow = (View) clock.getParent();
+        ViewGroup.LayoutParams rowLp = clockRow.getLayoutParams();
+        rowLp.width = ViewGroup.LayoutParams.WRAP_CONTENT;
+        clockRow.setLayoutParams(rowLp);
+        clock.setTypeface(Typeface.create("serif", Typeface.NORMAL));
+        clock.setTextSize(TypedValue.COMPLEX_UNIT_SP, 60);
+        clock.setLetterSpacing(-0.02f);
+        TextView date = findViewById(R.id.date);
+        date.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12);
+        date.setLetterSpacing(0.2f);
+        wallpaperPlayer.anchorCaption(clockBlock);
     }
 
     /** Centre the one-row header when the greeting and extra date lines are absent (#2265). */

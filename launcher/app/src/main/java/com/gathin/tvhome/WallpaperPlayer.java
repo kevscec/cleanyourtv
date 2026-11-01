@@ -5,7 +5,14 @@ import android.content.SharedPreferences;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
+import android.graphics.Color;
+import android.graphics.Typeface;
+import android.text.SpannableString;
+import android.text.Spanned;
 import android.text.TextUtils;
+import android.text.style.ForegroundColorSpan;
+import android.text.style.RelativeSizeSpan;
+import android.text.style.TypefaceSpan;
 import android.util.DisplayMetrics;
 import android.util.Log;
 import android.util.TypedValue;
@@ -55,6 +62,10 @@ final class WallpaperPlayer {
     /** wallpaper_captions: the shown picture's name from wallpapers/captions.txt; null when off or there are none. */
     private final TextView caption;
     private final Map<String, String> names;
+    /** editorial_home: the caption is large serif type under the clock panel, its credit on a small line. */
+    private final boolean editorial;
+    /** editorial_home: focus is below the dock and the caption is hidden. */
+    private boolean captionAway;
     /** wallpaper_moods: the collection's groups by time of day; empty rotates through all of it. */
     private final Map<String, Set<String>> moods;
     /** config.xml latitude and longitude for the sun's times, and today's {sunrise, sunset} once worked out. */
@@ -90,7 +101,8 @@ final class WallpaperPlayer {
         image.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
         names = config.wallpaperCaptions && config.wallpaperEnabled && !files.isEmpty()
                 ? WallpaperCaptions.read(files.get(0).getParentFile()) : Collections.emptyMap();
-        caption = names.isEmpty() ? null : makeCaption(context, root);
+        editorial = config.editorialHome;
+        caption = names.isEmpty() ? null : makeCaption(context, root, editorial);
         if (config.wallpaperEnabled && !files.isEmpty()) {
             root.addView(image, 0, new FrameLayout.LayoutParams(
                     ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
@@ -207,8 +219,9 @@ final class WallpaperPlayer {
      * Small light text under the top-right buttons, above everything else and never focusable. It sits where the
      * top bar ends in every layout, so it does not cover the clock, the stats line or the tiles.
      */
-    private static TextView makeCaption(Context context, FrameLayout root) {
+    private static TextView makeCaption(Context context, FrameLayout root, boolean editorial) {
         float dp = context.getResources().getDisplayMetrics().density;
+        if (editorial) return makeEditorialCaption(context, root, dp);
         TextView text = new TextView(context);
         text.setTextSize(TypedValue.COMPLEX_UNIT_SP, 15);
         text.setTextColor(0xD9FFFFFF);
@@ -231,6 +244,57 @@ final class WallpaperPlayer {
         return text;
     }
 
+    /** editorial_home: the title large in the system serif, its credit under it, placed by anchorCaption. */
+    private static TextView makeEditorialCaption(Context context, FrameLayout root, float dp) {
+        TextView text = new TextView(context);
+        text.setTextSize(TypedValue.COMPLEX_UNIT_SP, 32);
+        text.setTextColor(Color.WHITE);
+        text.setTypeface(Typeface.create("serif", Typeface.NORMAL));
+        text.setShadowLayer(10 * dp, 0, dp, 0x99000000);
+        text.setLineSpacing(4 * dp, 1f);
+        text.setMaxLines(3);
+        text.setEllipsize(TextUtils.TruncateAt.END);
+        text.setMaxWidth(Math.round(760 * dp));
+        text.setFocusable(false);
+        text.setAlpha(0f);
+        root.addView(text, new FrameLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.TOP | Gravity.START));
+        return text;
+    }
+
+    /** editorial_home: keep the caption lined up under anchor (the clock panel), a gap below it. */
+    void anchorCaption(View anchor) {
+        if (caption == null || !editorial) return;
+        float gap = 22 * anchor.getResources().getDisplayMetrics().density;
+        int[] at = new int[2];
+        anchor.addOnLayoutChangeListener((v, l, t, r, b, ol, ot, or, ob) -> {
+            v.getLocationInWindow(at);
+            caption.setTranslationX(at[0]);
+            caption.setTranslationY(at[1] + v.getHeight() + gap);
+        });
+    }
+
+    /** editorial_home: hide the caption while focus is below the dock, where the rows scroll up under it. */
+    void dimCaption(boolean away) {
+        if (caption == null || !editorial || captionAway == away) return;
+        captionAway = away;
+        // Visibility, not alpha: showCaption owns the alpha for its fade between pictures.
+        caption.setVisibility(away ? View.INVISIBLE : View.VISIBLE);
+    }
+
+    /** The caption's text: the name as written, or in editorial_home its title and a small, dimmer credit line. */
+    private CharSequence captionText(String name) {
+        if (!editorial) return name;
+        String[] parts = Editorial.split(name);
+        if (parts[1].isEmpty()) return parts[0];
+        SpannableString text = new SpannableString(parts[0] + "\n" + parts[1]);
+        int start = parts[0].length() + 1, end = text.length();
+        text.setSpan(new RelativeSizeSpan(0.42f), start, end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+        text.setSpan(new TypefaceSpan("sans-serif"), start, end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+        text.setSpan(new ForegroundColorSpan(0xB3FFFFFF), start, end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+        return text;
+    }
+
     /** The displayed picture's name, faded across a change; a picture without a name hides the caption. */
     private void showCaption(boolean fade) {
         if (caption == null) return;
@@ -242,12 +306,12 @@ final class WallpaperPlayer {
         }
         caption.setContentDescription(name);
         if (!fade || caption.getAlpha() == 0f) {
-            caption.setText(name);
+            caption.setText(captionText(name));
             caption.setAlpha(1f);
             return;
         }
         caption.animate().alpha(0f).setDuration(250).withEndAction(() -> {
-            caption.setText(name);
+            caption.setText(captionText(name));
             caption.animate().alpha(1f).setDuration(350).start();
         }).start();
     }
