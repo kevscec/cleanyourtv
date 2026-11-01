@@ -9,6 +9,9 @@
 
     <!-- Durabrand build only: the weather reading (WeatherPanel, Open-Meteo). Upstream keeps the launcher offline. -->
     <uses-permission android:name="android.permission.INTERNET" />
+    <!-- Durabrand build only: the Continue watching row (WatchNextReader). A runtime permission, granted with
+         pm grant; without it the row stays empty. -->
+    <uses-permission android:name="android.permission.READ_TV_LISTINGS" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
     <!-- Needed since Android 10 to read the Wi-Fi network name for the network pill. Never requested at

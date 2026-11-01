@@ -67,6 +67,8 @@ final class WallpaperPlayer {
     private final boolean editorial;
     /** editorial_home: focus is below the dock and the caption is hidden. */
     private boolean captionAway;
+    /** continue_watching: the row is showing in the caption's place. */
+    private boolean captionSuppressed;
     /** editorial_home: the highest the caption may sit (under the panel) and where its bottom goes (0: unset). */
     private float captionTop;
     private int captionBottom;
@@ -308,8 +310,19 @@ final class WallpaperPlayer {
     void dimCaption(boolean away) {
         if (caption == null || !editorial || captionAway == away) return;
         captionAway = away;
+        captionVisibility();
+    }
+
+    /** continue_watching: the Continue watching row stands where the caption would, so the caption steps aside. */
+    void suppressCaption(boolean suppressed) {
+        if (caption == null || !editorial || captionSuppressed == suppressed) return;
+        captionSuppressed = suppressed;
+        captionVisibility();
+    }
+
+    private void captionVisibility() {
         // Visibility, not alpha: showCaption owns the alpha for its fade between pictures.
-        captionGroup().setVisibility(away ? View.INVISIBLE : View.VISIBLE);
+        captionGroup().setVisibility(captionAway || captionSuppressed ? View.INVISIBLE : View.VISIBLE);
     }
 
     /** The caption's text: the name as written, or in editorial_home its title and a small, dimmer credit line. */

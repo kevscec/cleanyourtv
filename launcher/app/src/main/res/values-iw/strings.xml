@@ -165,4 +165,10 @@
     <string name="weather_range">מקס׳ %1$d° · מינ׳ %2$d°</string>
     <!-- dock_library_tile: the tile at the end of the dock that opens the App library. -->
     <string name="all_apps">כל האפליקציות</string>
+    <!-- continue_watching (ContinueRow): the row's heading and each card's detail line. -->
+    <string name="cw_title">המשך צפייה</string>
+    <string name="cw_episode">ע%1$s · פ%2$s</string>
+    <string name="cw_episode_only">פ%1$s</string>
+    <string name="cw_left">נותרו %1$d דק׳</string>
+    <string name="cw_next">הפרק הבא</string>
 </resources>

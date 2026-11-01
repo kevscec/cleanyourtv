@@ -186,6 +186,8 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     private View clockBlock;
     /** weather: the reading beside the clock; null when off or config.xml has no location. */
     private WeatherPanel weatherPanel;
+    /** continue_watching: the row above the dock; null when off. */
+    private ContinueRow continueRow;
     private View btnInputs;
     /** config show_inputs_pill: false keeps the Inputs pill hidden even when the TV has inputs. */
     private boolean showInputsPill = true;
@@ -593,6 +595,26 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             alignDateBelowIconsWithClock();
         }
         if (cfg.editorialHome) editorialHeader();
+        if (cfg.continueWatching) {
+            continueRow = new ContinueRow(this, root, handler, new ContinueRow.Host() {
+                @Override
+                public void focusDockFrom(int card) {
+                    focusTile(Math.max(0, Math.min(card, Math.min(COLUMNS, adapter.appCount()) - 1)));
+                }
+
+                @Override
+                public void focusTopBar() {
+                    // The bar's first button, as the top bar's own keys count it (Inputs when it shows).
+                    (btnInputs.getVisibility() == View.VISIBLE ? btnInputs : firstTopButton()).requestFocus();
+                }
+
+                @Override
+                public void onRowChanged(boolean showing) {
+                    // As in the design: the row takes the caption's place while there is something to continue.
+                    wallpaperPlayer.suppressCaption(showing);
+                }
+            });
+        }
         String latitude = getString(R.string.latitude), longitude = getString(R.string.longitude);
         if (cfg.weather && !latitude.trim().isEmpty() && !longitude.trim().isEmpty()) {
             LinearLayout beside = cfg.editorialHome ? (LinearLayout) clockBlock
@@ -904,6 +926,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             if (event.getAction() != KeyEvent.ACTION_DOWN) return false;
             if (keyCode == KeyEvent.KEYCODE_DPAD_UP) return true;
             if (keyCode == KeyEvent.KEYCODE_DPAD_DOWN) {
+                if (continueRow != null && continueRow.focusCard(0)) return true;
                 // Back to the dock tile Up came from, not wherever the focus finder lands.
                 focusTile(singleRow ? lastFocused : lastFocused % COLUMNS);
                 return true;
@@ -1140,6 +1163,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         wallpaperPlayer.start();
         handler.postDelayed(minuteTick, MINUTE_MS);
         if (weatherPanel != null) weatherPanel.refresh();
+        if (continueRow != null) continueRow.refresh();
         if (festive && lamp != null) {
             lamp.start();
             LocalDate today = LocalDate.now();
@@ -1385,6 +1409,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         if (openOnStartOnWake) unregisterReceiver(wakeReceiver);
         wallpaperPlayer.close();
         if (weatherPanel != null) weatherPanel.close();
+        if (continueRow != null) continueRow.close();
         ConnectivityManager cm = getSystemService(ConnectivityManager.class);
         TvInputManager tim = (TvInputManager) getSystemService(TV_INPUT_SERVICE);
         if (tim != null) tim.unregisterCallback(inputCallback);
@@ -2479,6 +2504,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
                     rtlAppGrid, keyCode == KeyEvent.KEYCODE_DPAD_LEFT);
         }
         if (keyCode == KeyEvent.KEYCODE_DPAD_UP) {
+            if (position < COLUMNS && continueRow != null && continueRow.focusCard(position)) return true;
             if (position < COLUMNS) return false;          // dock row: let focus move to the top bar
             target = position - COLUMNS;
         } else {
@@ -2642,6 +2668,9 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
                 focusTile(Math.max(0, Math.min(COLUMNS, adapter.appCount()) - 1));
                 return true;
             }
+            if (key == KeyEvent.KEYCODE_DPAD_UP && continueRow != null && continueRow.focusCard(ContinueRow.MAX)) {
+                return true;
+            }
             // Nothing below or beside it: the dock is the last row and this is its end.
             return key == KeyEvent.KEYCODE_DPAD_DOWN || key == KeyEvent.KEYCODE_DPAD_RIGHT;
         });
@@ -2673,6 +2702,14 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
                 grid.invalidate();
             }
             wallpaperPlayer.captionAbove(card.top - Math.round(56 * density));
+            if (continueRow != null) {
+                View row = continueRow.view;
+                float x = clockBlock.getLeft() + ((View) clockBlock.getParent()).getLeft()
+                        + ((View) clockBlock.getParent().getParent()).getLeft();
+                float y = card.top - Math.round(56 * density) - row.getHeight();
+                if (row.getTranslationX() != x) row.setTranslationX(x);
+                if (row.getTranslationY() != y) row.setTranslationY(y);
+            }
             if (tile.getVisibility() != View.VISIBLE) tile.setVisibility(View.VISIBLE);
         };
         grid.getViewTreeObserver().addOnGlobalLayoutListener(follow::run);

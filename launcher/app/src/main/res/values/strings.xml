@@ -171,4 +171,10 @@
     <string name="weather_range">High %1$d° · Low %2$d°</string>
     <!-- dock_library_tile: the tile at the end of the dock that opens the App library. -->
     <string name="all_apps">All apps</string>
+    <!-- continue_watching (ContinueRow): the row's heading and each card's detail line. -->
+    <string name="cw_title">Continue watching</string>
+    <string name="cw_episode">S%1$s · E%2$s</string>
+    <string name="cw_episode_only">E%1$s</string>
+    <string name="cw_left">%1$d min left</string>
+    <string name="cw_next">Next episode</string>
 </resources>

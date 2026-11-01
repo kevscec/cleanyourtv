@@ -527,6 +527,10 @@
          App library; no rows below. Needs app_library and dock_row; ignored with single_row. Off by default; a
          theme can set "dock_library_tile": true. -->
     <bool name="dock_library_tile">false</bool>
+    <!-- Durabrand build: a Continue watching row above the dock, from what apps publish to the TV provider
+         (Watch Next, and a preview channel named like "Continue watching"); needs READ_TV_LISTINGS, granted with
+         pm grant. Off by default; a theme can set "continue_watching": true. -->
+    <bool name="continue_watching">false</bool>
     <!-- The clock screensaver (Home idle clock and the system screensaver) over Home's wallpaper instead of black with
          a coloured glow. The clock still moves every minute. Can also be set with "clock_wallpaper" in a theme. -->
     <bool name="clock_wallpaper">false</bool>

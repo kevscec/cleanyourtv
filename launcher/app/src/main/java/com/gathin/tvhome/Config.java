@@ -144,6 +144,8 @@ final class Config {
     final boolean weather;
     /** Home is the dock and an All apps tile that opens the library (config.xml, dock_library_tile). */
     final boolean dockLibraryTile;
+    /** The Continue watching row above the dock (config.xml, continue_watching); WatchNextReader. */
+    final boolean continueWatching;
     /** App library as a round button in the top bar (config.xml library_button); needs app_library. */
     final boolean libraryButton;
     /** The App library pill after the last Home row; false hides it while libraryButton is on (show_library_pill). */
@@ -296,7 +298,7 @@ final class Config {
                    boolean keyFilter, boolean dockGlass, String glowStyle, boolean wallpaperCaptions,
                    boolean handleViewInputs, boolean tileMenu, boolean dockEvenPadding, boolean dockBand, boolean cinematicDots, boolean cinematicWhiteFocus, boolean wifiStatusColor, int cinematicScrim, int cinematicArt,
                    Map<String, Set<String>> wallpaperMoods, boolean gamepadPassthrough, boolean consumeVolumeKeys, boolean powerOnHome, boolean homeLongPressHome, boolean wifiStatusWarnings, List<String> topBarApps, boolean showGreeting, boolean headerWhite, boolean clockWallpaper, int clockWallpaperDim, boolean clockGlow, String glassStyle, boolean singleRow, boolean dockBandAll, boolean lunarDate, int lunarUtcOffset, boolean dateBelowClock, boolean vpnPill, String locale, boolean powerOnHomeAlways, boolean inputsConnectedOnly,
-                   int openOnStartNetworkWait, boolean openOnStartOnWake, boolean iconOnlyVpn, String clockFormat, boolean backOpensClock, boolean glowSnap, boolean editorialHome, boolean weather, boolean dockLibraryTile) {
+                   int openOnStartNetworkWait, boolean openOnStartOnWake, boolean iconOnlyVpn, String clockFormat, boolean backOpensClock, boolean glowSnap, boolean editorialHome, boolean weather, boolean dockLibraryTile, boolean continueWatching) {
         this.handleViewInputs = handleViewInputs;
         this.tileMenu = tileMenu;
         this.inputKeycodes = inputKeycodes;
@@ -351,6 +353,7 @@ final class Config {
         this.editorialHome = editorialHome;
         this.weather = weather;
         this.dockLibraryTile = dockLibraryTile;
+        this.continueWatching = continueWatching;
         this.libraryButton = libraryButton;
         this.showLibraryPill = showLibraryPill;
         this.wifiLabelWidth = wifiLabelWidth;
@@ -484,6 +487,7 @@ final class Config {
         boolean editorialHome = res.getBoolean(R.bool.editorial_home);
         boolean weather = res.getBoolean(R.bool.weather);
         boolean dockLibraryTile = res.getBoolean(R.bool.dock_library_tile);
+        boolean continueWatching = res.getBoolean(R.bool.continue_watching);
         boolean libraryButton = res.getBoolean(R.bool.library_button);
         boolean showLibraryPill = res.getBoolean(R.bool.show_library_pill);
         int wifiLabelWidth = res.getInteger(R.integer.wifi_label_width);
@@ -600,6 +604,7 @@ final class Config {
             editorialHome = bool(json, "editorial_home", editorialHome);
             weather = bool(json, "weather", weather);
             dockLibraryTile = bool(json, "dock_library_tile", dockLibraryTile);
+            continueWatching = bool(json, "continue_watching", continueWatching);
             libraryButton = bool(json, "library_button", libraryButton);
             showLibraryPill = bool(json, "show_library_pill", showLibraryPill);
             wifiLabelWidth = integer(json, "wifi_label_width", wifiLabelWidth, 0, 300);
@@ -725,7 +730,7 @@ final class Config {
                 consumeVolumeKeys, powerOnHome, homeLongPressHome, wifiStatusWarnings, topBarApps, showGreeting, headerWhite, clockWallpaper,
                 Math.max(0, Math.min(90, clockWallpaperDim)), clockGlow, glassStyle, singleRow && dockRow, dockBandAll, lunar, lunarOffset,
                 dateBelowClock, vpnPill, locale, powerOnHomeAlways, inputsConnectedOnly,
-                Math.max(0, Math.min(600, openOnStartNetworkWait)), openOnStartOnWake, iconOnlyVpn, clockFormat, backOpensClock, glowSnap, editorialHome, weather, dockLibraryTile && library && dockRow && !(singleRow && dockRow));
+                Math.max(0, Math.min(600, openOnStartNetworkWait)), openOnStartOnWake, iconOnlyVpn, clockFormat, backOpensClock, glowSnap, editorialHome, weather, dockLibraryTile && library && dockRow && !(singleRow && dockRow), continueWatching);
     }
 
     /**
