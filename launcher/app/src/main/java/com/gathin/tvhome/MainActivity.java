@@ -595,6 +595,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             alignDateBelowIconsWithClock();
         }
         if (cfg.editorialHome) editorialHeader();
+        if (cfg.editorialHome && cfg.homeTabs) addHomeTabs(cfg);
         if (cfg.continueWatching) {
             continueRow = new ContinueRow(this, root, handler, new ContinueRow.Host() {
                 @Override
@@ -604,8 +605,9 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
 
                 @Override
                 public void focusTopBar() {
-                    // The bar's first button, as the top bar's own keys count it (Inputs when it shows).
-                    (btnInputs.getVisibility() == View.VISIBLE ? btnInputs : firstTopButton()).requestFocus();
+                    // The Home tab when there are tabs; else the bar's first button (Inputs when it shows).
+                    if (homeTabs != null) homeTabs.get(0).requestFocus();
+                    else (btnInputs.getVisibility() == View.VISIBLE ? btnInputs : firstTopButton()).requestFocus();
                 }
 
                 @Override
@@ -748,6 +750,8 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             // A single row never shows the names under its tiles (the title above the row names the app), so the
             // 7dp gap and 22dp label item_app.xml keeps for them would only lift the row: sit it that much lower.
             if (singleRow && !cfg.alwaysShowNames) want += (int) (29 * density);
+            // dock_library_tile: the dock is the last row too, so the same unused name room would only lift it.
+            else if (cfg.dockLibraryTile && !cfg.alwaysShowNames) want += (int) (29 * density);
             if (grid.getPaddingTop() != want) {
                 grid.setPadding(grid.getPaddingLeft(), want, grid.getPaddingRight(), grid.getPaddingBottom());
                 // A vertical grid parks the dock on the new padding line by scrolling (onTileFocused); a sideways
@@ -934,6 +938,10 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             int firstButton = btnInputs.getVisibility() == View.VISIBLE ? R.id.btnInputs : firstTopButton().getId();
             int leftButton = rtlMenuBar ? R.id.btnSettings : firstButton;
             int rightButton = rtlMenuBar ? firstButton : R.id.btnSettings;
+            if (keyCode == KeyEvent.KEYCODE_DPAD_LEFT && v.getId() == leftButton && homeTabs != null) {
+                homeTabs.get(homeTabs.size() - 1).requestFocus();
+                return true;
+            }
             if (keyCode == KeyEvent.KEYCODE_DPAD_LEFT) return v.getId() == leftButton;
             return keyCode == KeyEvent.KEYCODE_DPAD_RIGHT && v.getId() == rightButton;
         };
@@ -1797,7 +1805,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         if (openPopup != null) openPopup.dismiss();
         libraryFocusPending = false;
         libraryFromTopBar = false;
-        libraryFromDockTile = false;
+        libraryReturnTo = null;
         libraryFromVpnPill = false;
         appLibrary = new AppLibraryDialog(this, animations, reducedMotion, appLibrarySelection, libraryOkOpens, adapter::containsPackage, () -> reloadApps(false), () -> {
             appLibrary = null;
@@ -1807,9 +1815,10 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
                 btnLibraryTop.requestFocus();
                 return;
             }
-            if (libraryFromDockTile) {
-                libraryFromDockTile = false;
-                allAppsTile.requestFocus();
+            if (libraryReturnTo != null) {
+                View back = libraryReturnTo;
+                libraryReturnTo = null;
+                back.requestFocus();
                 return;
             }
             boolean fromVpnPill = libraryFromVpnPill;
@@ -2578,7 +2587,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         panel.setCornerRadius(24 * density);
         panel.setStroke(Math.max(1, Math.round(density)), 0x40FFFFFF);
         clockBlock.setBackground(panel);
-        int padX = Math.round(30 * density), padY = Math.round(18 * density);
+        int padX = Math.round(30 * density), padY = Math.round(14 * density);
         clockBlock.setPadding(padX, padY, padX, padY + Math.round(4 * density));
         TextView clock = findViewById(R.id.clock);
         // A match_parent row adds nothing to a wrapping block's width, which then followed the date alone and
@@ -2660,7 +2669,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         tile.setOnFocusChangeListener((v, focused) -> look.run());
         tile.setOnClickListener(v -> {
             onLibraryRequested();
-            libraryFromDockTile = true;   // closing it comes back to this tile
+            libraryReturnTo = tile;   // closing it comes back to this tile
         });
         tile.setOnKeyListener((v, key, event) -> {
             if (event.getAction() != KeyEvent.ACTION_DOWN) return false;
@@ -2706,7 +2715,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
                 View row = continueRow.view;
                 float x = clockBlock.getLeft() + ((View) clockBlock.getParent()).getLeft()
                         + ((View) clockBlock.getParent().getParent()).getLeft();
-                float y = card.top - Math.round(56 * density) - row.getHeight();
+                float y = card.top - Math.round(40 * density) - row.getHeight();
                 if (row.getTranslationX() != x) row.setTranslationX(x);
                 if (row.getTranslationY() != y) row.setTranslationY(y);
             }
@@ -2719,6 +2728,122 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
                 follow.run();
             }
         });
+    }
+
+    /**
+     * home_tabs: Home / Explore / Apps above the clock panel, as in the editorial design. Home is where we are; Explore
+     * opens explore_uri (Stremio's Discover here); Apps opens the App library. They sit in the top bar's line: Right
+     * from the last goes on to the round buttons, Down goes to the Continue watching row or the dock.
+     */
+    private void addHomeTabs(Config cfg) {
+        RelativeLayout header = (RelativeLayout) clockBlock.getParent();
+        LinearLayout bar = new LinearLayout(this);
+        bar.setId(View.generateViewId());
+        bar.setOrientation(LinearLayout.HORIZONTAL);
+        int pad = Math.round(4 * density);
+        bar.setPadding(pad, pad, pad, pad);
+        GradientDrawable glassPill = new GradientDrawable();
+        glassPill.setColor(0x17FFFFFF);
+        glassPill.setStroke(Math.max(1, Math.round(density)), 0x2EFFFFFF);
+        glassPill.setCornerRadius(100 * density);
+        bar.setBackground(glassPill);
+        // A focused tab grows into the bar's padding; neither the padding nor the bar may cut it.
+        bar.setClipChildren(false);
+        bar.setClipToPadding(false);
+        List<View> tabs = new ArrayList<>();
+        List<Runnable> looks = new ArrayList<>();
+        tabs.add(tab(bar, R.string.tab_home, true, () -> { }, looks));
+        if (!cfg.exploreUri.isEmpty()) {
+            tabs.add(tab(bar, R.string.tab_explore, false, () -> openExplore(cfg.exploreUri), looks));
+        }
+        if (cfg.appLibrary) {
+            View[] apps = new View[1];
+            apps[0] = tab(bar, R.string.tab_apps, false, () -> {
+                onLibraryRequested();
+                libraryReturnTo = apps[0];
+            }, looks);
+            tabs.add(apps[0]);
+        }
+        for (int i = 0; i < tabs.size(); i++) {
+            int index = i;
+            tabs.get(i).setOnKeyListener((v, key, event) -> {
+                if (event.getAction() != KeyEvent.ACTION_DOWN) return false;
+                switch (key) {
+                    case KeyEvent.KEYCODE_DPAD_LEFT:
+                        if (index > 0) tabs.get(index - 1).requestFocus();
+                        return true;
+                    case KeyEvent.KEYCODE_DPAD_RIGHT:
+                        if (index < tabs.size() - 1) tabs.get(index + 1).requestFocus();
+                        else (btnInputs.getVisibility() == View.VISIBLE ? btnInputs : firstTopButton()).requestFocus();
+                        return true;
+                    case KeyEvent.KEYCODE_DPAD_DOWN:
+                        if (continueRow == null || !continueRow.focusCard(0)) focusTile(lastFocused % COLUMNS);
+                        return true;
+                    case KeyEvent.KEYCODE_DPAD_UP:
+                        return true;
+                    default:
+                        return false;
+                }
+            });
+        }
+        RelativeLayout.LayoutParams barLp = new RelativeLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT);
+        barLp.addRule(RelativeLayout.ALIGN_PARENT_START);
+        barLp.addRule(RelativeLayout.ALIGN_PARENT_TOP);
+        header.addView(bar, barLp);
+        RelativeLayout.LayoutParams blockLp = (RelativeLayout.LayoutParams) clockBlock.getLayoutParams();
+        blockLp.addRule(RelativeLayout.BELOW, bar.getId());
+        blockLp.topMargin = Math.round(14 * density);
+        clockBlock.setLayoutParams(blockLp);
+        tabBar = bar;
+        homeTabs = tabs;
+    }
+
+    /**
+     * One tab. At rest the current tab is the white pill, as in the design; once focus is in the bar, the focused tab
+     * is the white one (lifted) and the current tab dims to glass, so the focus always reads.
+     */
+    private View tab(LinearLayout bar, int label, boolean current, Runnable action, List<Runnable> looks) {
+        TextView tab = new TextView(this);
+        tab.setText(label);
+        tab.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13);
+        tab.setTypeface(UiFont.get(this, current ? R.string.font_medium : R.string.font_regular));
+        tab.setGravity(Gravity.CENTER);
+        tab.setFocusable(true);
+        tab.setPadding(Math.round(16 * density), Math.round(6 * density), Math.round(16 * density), Math.round(7 * density));
+        GradientDrawable face = new GradientDrawable();
+        face.setCornerRadius(100 * density);
+        tab.setBackground(face);
+        Runnable look = () -> {
+            boolean on = tab.isFocused();
+            boolean white = on || (current && !bar.hasFocus());
+            face.setColor(white ? 0xF2FFFFFF : current ? 0x38FFFFFF : 0x00000000);
+            tab.setTextColor(white ? 0xFF0B0D12 : current ? Color.WHITE : 0xBFFFFFFF);
+            float scale = on && advancedEffects ? 1.08f : 1f;
+            tab.animate().scaleX(scale).scaleY(scale).setDuration(animations ? 150 : 0).start();
+        };
+        looks.add(look);
+        look.run();
+        // Every tab's look depends on where the focus is in the bar, so a change redraws them all.
+        // Posted: while focus moves out, the bar still counts as focused inside this callback.
+        tab.setOnFocusChangeListener((v, focused) -> tab.post(() -> {
+            for (Runnable each : looks) each.run();
+        }));
+        tab.setOnClickListener(v -> action.run());
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT);
+        if (bar.getChildCount() > 0) lp.setMarginStart(Math.round(2 * density));
+        bar.addView(tab, lp);
+        return tab;
+    }
+
+    /** home_tabs: Explore's link, in whatever app handles it. */
+    private void openExplore(String uri) {
+        try {
+            startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(uri)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
+        } catch (Exception ignored) {
+            // No app handles the link (Stremio uninstalled): the tab does nothing, like a missing dock app.
+        }
     }
 
     /** The gap between two dock tiles, from the first and the last of count + 1 equal cells. */
@@ -2770,8 +2895,9 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         buttons.setLayoutParams(lp);
         // Either side can be laid out first; update after both without requesting another layout mid-pass.
         View block = findViewById(R.id.leftBlock);
-        Runnable align = () -> buttons.setTranslationY(topIn(block, clock)
-                + (clock.getHeight() - buttons.getHeight()) / 2f);
+        Runnable align = () -> buttons.setTranslationY(tabBar != null
+                ? tabBar.getTop() - block.getTop() + (tabBar.getHeight() - buttons.getHeight()) / 2f
+                : topIn(block, clock) + (clock.getHeight() - buttons.getHeight()) / 2f);
         clockRow.addOnLayoutChangeListener((v, l, t, r, b, ol, ot, or, ob) -> align.run());
         block.addOnLayoutChangeListener((v, l, t, r, b, ol, ot, or, ob) -> align.run());
         buttons.addOnLayoutChangeListener((v, l, t, r, b, ol, ot, or, ob) -> align.run());
@@ -3260,8 +3386,11 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     private View btnLibraryTop;
     /** The open library came from that button: closing it returns there instead of scrolling to the grid's end. */
     private boolean libraryFromTopBar;
-    /** dock_library_tile: the library was opened from the All apps tile, so closing it focuses the tile again. */
-    private boolean libraryFromDockTile;
+    /** The All apps tile or the Apps tab the library was opened from: closing it focuses that view again. */
+    private View libraryReturnTo;
+    /** home_tabs: the tabs (Home first), or null when off. */
+    private List<View> homeTabs;
+    private LinearLayout tabBar;
     private View allAppsTile;
     /** The open library came from the VPN pill (vpn_pill, no VPN app): closing it returns there while the pill still shows. */
     private boolean libraryFromVpnPill;

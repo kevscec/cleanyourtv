@@ -61,6 +61,8 @@ rule sit on its wanted list until a screenshot arrives.
 | `weather_place` | <img src="switches/weather.jpg" width="320" alt="weather_place under the weather reading on a TV"> |
 | `dock_library_tile` | <img src="switches/dock_library_tile.jpg" width="320" alt="dock_library_tile on a TV"> |
 | `continue_watching` | <img src="switches/continue_watching.jpg" width="320" alt="continue_watching on a TV"> |
+| `home_tabs` | <img src="switches/home_tabs.jpg" width="320" alt="home_tabs on a TV"> |
+| `explore_uri` | <img src="switches/home_tabs.jpg" width="320" alt="the Explore tab of home_tabs on a TV"> |
 | `locale` | <img src="switches/locale.jpg" width="320" alt="locale set to en on a TV whose system language is Vietnamese"> |
 | `power_on_home` | <img src="switches/power_on_home.jpg" width="320" alt="power_on_home on a TV"> |
 | `home_long_press_home` | <img src="switches/home_long_press_home.jpg" width="320" alt="home_long_press_home on a TV"> |

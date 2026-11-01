@@ -177,4 +177,8 @@
     <string name="cw_episode_only">E%1$s</string>
     <string name="cw_left">%1$d min left</string>
     <string name="cw_next">Next episode</string>
+    <!-- home_tabs: the three tabs above the clock panel. -->
+    <string name="tab_home">Home</string>
+    <string name="tab_explore">Explore</string>
+    <string name="tab_apps">Apps</string>
 </resources>

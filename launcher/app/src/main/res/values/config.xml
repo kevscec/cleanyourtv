@@ -531,6 +531,13 @@
          (Watch Next, and a preview channel named like "Continue watching"); needs READ_TV_LISTINGS, granted with
          pm grant. Off by default; a theme can set "continue_watching": true. -->
     <bool name="continue_watching">false</bool>
+    <!-- Durabrand build, with editorial_home: Home / Explore / Apps tabs above the clock panel, as in the editorial
+         design. Explore opens explore_uri; Apps opens the App library (needs app_library). Off by default; a theme
+         can set "home_tabs": true. -->
+    <bool name="home_tabs">false</bool>
+    <!-- home_tabs: what Explore opens, a link an installed app handles (stremio:///discover opens Stremio's
+         Discover). Empty hides the Explore tab. A theme can set "explore_uri". -->
+    <string name="explore_uri" translatable="false"></string>
     <!-- The clock screensaver (Home idle clock and the system screensaver) over Home's wallpaper instead of black with
          a coloured glow. The clock still moves every minute. Can also be set with "clock_wallpaper" in a theme. -->
     <bool name="clock_wallpaper">false</bool>

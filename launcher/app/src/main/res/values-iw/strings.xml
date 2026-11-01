@@ -171,4 +171,8 @@
     <string name="cw_episode_only">פ%1$s</string>
     <string name="cw_left">נותרו %1$d דק׳</string>
     <string name="cw_next">הפרק הבא</string>
+    <!-- home_tabs: the three tabs above the clock panel. -->
+    <string name="tab_home">בית</string>
+    <string name="tab_explore">גלה</string>
+    <string name="tab_apps">אפליקציות</string>
 </resources>

@@ -168,4 +168,8 @@
     <string name="cw_episode_only">E%1$s</string>
     <string name="cw_left">quedan %1$d min</string>
     <string name="cw_next">Siguiente episodio</string>
+    <!-- home_tabs: the three tabs above the clock panel. -->
+    <string name="tab_home">Inicio</string>
+    <string name="tab_explore">Explorar</string>
+    <string name="tab_apps">Apps</string>
 </resources>
